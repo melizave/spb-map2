@@ -1373,7 +1373,275 @@ url:e,reason:"blocked_domain_not_allowlisted"},b.parentOrigin);throw new DOMExce
         </div>
       </div>
     </section>
+          
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Добавление меток</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; height: 100vh; display: flex; flex-direction: column; }
+header { padding: 12px 16px; background: #1e293b; color: white; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+header h1 { font-size: 16px; font-weight: 600; margin-right: auto; }
+button { padding: 7px 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.btn-add { background: #059669; color: white; }
+.btn-add.active { background: #047857; }
+.btn-export { background: #3b82f6; color: white; }
+.btn-clear { background: #ef4444; color: white; }
+.btn-save { background: #2563eb; color: white; }
+.btn-delete { background: #fee2e2; color: #b91c1c; }
+#map { flex: 1; }
+.sidebar { width: 320px; background: #f8fafc; border-left: 1px solid #e2e8f0; padding: 16px; overflow-y: auto; display: none; }
+.sidebar.open { display: block; }
+.container { display: flex; flex: 1; overflow: hidden; }
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: 12px; color: #64748b; margin-bottom: 4px; }
+.form-group input, .form-group textarea { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; }
+.form-group textarea { height: 80px; resize: vertical; }
+.hint { font-size: 12px; color: #94a3b8; margin-top: 8px; }
+.marker-list { margin-top: 16px; }
+.marker-item { padding: 10px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
+.marker-item:hover { border-color: #94a3b8; }
+.marker-item.active { border-color: #3b82f6; background: #eff6ff; }
+</style>
+</head>
+<body>
+<header>
+<h1>Добавление меток</h1>
+<button class="btn-add" id="btnAdd">＋ Добавить метку</button>
+<button class="btn-export" id="btnExport">Скачать JSON</button>
+<button class="btn-clear" id="btnClear">Очистить всё</button>
+</header>
 
+<div class="container">
+<div id="map"></div>
+
+<div class="sidebar" id="sidebar">
+<h3 style="margin-bottom:12px;font-size:15px;" id="formTitle">Новая метка</h3>
+
+<div class="form-group">
+<label>Название</label>
+<input type="text" id="fTitle" placeholder="Например: Церковь..." />
+</div>
+<div class="form-group">
+<label>Описание</label>
+<textarea id="fDesc" placeholder="Краткое описание..."></textarea>
+</div>
+<div class="form-group">
+<label>Широта</label>
+<input type="number" step="0.0001" id="fLat" />
+</div>
+<div class="form-group">
+<label>Долгота</label>
+<input type="number" step="0.0001" id="fLng" />
+</div>
+
+<div style="display:flex;gap:8px;margin-top:12px;">
+<button class="btn-save" id="btnSave">Сохранить</button>
+<button class="btn-delete" id="btnDelete">Удалить</button>
+</div>
+<p class="hint">Кликните по карте, чтобы поставить метку</p>
+
+<div class="marker-list" id="markerList"></div>
+</div>
+</div>
+
+<script>
+// ========== СОСТОЯНИЕ ==========
+let markersData = JSON.parse(localStorage.getItem("my_markers") || "[]");
+let leafletMarkers = {};
+let addingMode = false;
+let selectedId = null;
+let nextId = markersData.length ? Math.max(...markersData.map(m => m.id)) + 1 : 1;
+
+// ========== КАРТА ==========
+const map = L.map("map").setView([59.93, 30.33], 12); // Санкт-Петербург
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+maxZoom: 19,
+attribution: "© OpenStreetMap"
+}).addTo(map);
+
+// ========== ФУНКЦИИ ==========
+function saveToStorage() {
+localStorage.setItem("my_markers", JSON.stringify(markersData));
+}
+
+function createIcon(isSelected) {
+return L.divIcon({
+className: "",
+html: `<div style="
+width: 26px; height: 26px;
+background: ${isSelected ? "#2563eb" : "#dc2626"};
+border: 2px solid white;
+border-radius: 50% 50% 50% 0;
+transform: rotate(-45deg);
+box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+"></div>`,
+iconSize: [26, 26],
+iconAnchor: [13, 26]
+});
+}
+
+function renderMarkers() {
+// удаляем старые
+Object.values(leafletMarkers).forEach(m => map.removeLayer(m));
+leafletMarkers = {};
+
+markersData.forEach(m => {
+const marker = L.marker([m.lat, m.lng], {
+icon: createIcon(selectedId === m.id),
+draggable: true
+}).addTo(map);
+
+marker.bindPopup(`<b>${m.title || "Без названия"}</b><br>${m.desc || ""}`);
+
+marker.on("click", () => selectMarker(m.id));
+marker.on("dragend", (e) => {
+const pos = e.target.getLatLng();
+m.lat = +pos.lat.toFixed(5);
+m.lng = +pos.lng.toFixed(5);
+saveToStorage();
+if (selectedId === m.id) {
+document.getElementById("fLat").value = m.lat;
+document.getElementById("fLng").value = m.lng;
+}
+});
+
+leafletMarkers[m.id] = marker;
+});
+
+renderList();
+}
+
+function renderList() {
+const list = document.getElementById("markerList");
+if (markersData.length === 0) {
+list.innerHTML = "<p style='font-size:13px;color:#94a3b8;'>Меток пока нет</p>";
+return;
+}
+list.innerHTML = markersData.map(m => `
+<div class="marker-item ${selectedId === m.id ? "active" : ""}" onclick="selectMarker(${m.id})">
+<strong>${m.title || "Без названия"}</strong><br>
+<small style="color:#64748b">${m.lat.toFixed(4)}, ${m.lng.toFixed(4)}</small>
+</div>
+`).join("");
+}
+
+function selectMarker(id) {
+selectedId = id;
+const m = markersData.find(x => x.id === id);
+if (!m) return;
+
+document.getElementById("sidebar").classList.add("open");
+document.getElementById("formTitle").textContent = "Редактирование метки";
+document.getElementById("fTitle").value = m.title || "";
+document.getElementById("fDesc").value = m.desc || "";
+document.getElementById("fLat").value = m.lat;
+document.getElementById("fLng").value = m.lng;
+
+renderMarkers();
+map.setView([m.lat, m.lng], Math.max(map.getZoom(), 14));
+}
+
+// ========== ДОБАВЛЕНИЕ ==========
+document.getElementById("btnAdd").onclick = () => {
+addingMode = !addingMode;
+const btn = document.getElementById("btnAdd");
+if (addingMode) {
+btn.textContent = "Отмена";
+btn.classList.add("active");
+document.getElementById("sidebar").classList.add("open");
+document.getElementById("formTitle").textContent = "Новая метка — кликните по карте";
+// очищаем форму
+document.getElementById("fTitle").value = "";
+document.getElementById("fDesc").value = "";
+document.getElementById("fLat").value = "";
+document.getElementById("fLng").value = "";
+selectedId = null;
+} else {
+btn.textContent = "＋ Добавить метку";
+btn.classList.remove("active");
+}
+};
+
+map.on("click", (e) => {
+if (!addingMode) return;
+
+const { lat, lng } = e.latlng;
+const newMarker = {
+id: nextId++,
+title: "Новая метка",
+desc: "",
+lat: +lat.toFixed(5),
+lng: +lng.toFixed(5)
+};
+
+markersData.push(newMarker);
+saveToStorage();
+addingMode = false;
+document.getElementById("btnAdd").textContent = "＋ Добавить метку";
+document.getElementById("btnAdd").classList.remove("active");
+
+renderMarkers();
+selectMarker(newMarker.id);
+});
+
+// ========== СОХРАНЕНИЕ / УДАЛЕНИЕ ==========
+document.getElementById("btnSave").onclick = () => {
+if (selectedId === null) return;
+const m = markersData.find(x => x.id === selectedId);
+if (!m) return;
+
+m.title = document.getElementById("fTitle").value.trim() || "Без названия";
+m.desc = document.getElementById("fDesc").value.trim();
+m.lat = parseFloat(document.getElementById("fLat").value) || m.lat;
+m.lng = parseFloat(document.getElementById("fLng").value) || m.lng;
+
+saveToStorage();
+renderMarkers();
+alert("Сохранено");
+};
+
+document.getElementById("btnDelete").onclick = () => {
+if (selectedId === null) return;
+if (!confirm("Удалить эту метку?")) return;
+
+markersData = markersData.filter(m => m.id !== selectedId);
+saveToStorage();
+selectedId = null;
+document.getElementById("sidebar").classList.remove("open");
+renderMarkers();
+};
+
+// ========== ЭКСПОРТ ==========
+document.getElementById("btnExport").onclick = () => {
+const blob = new Blob([JSON.stringify(markersData, null, 2)], { type: "application/json" });
+const a = document.createElement("a");
+a.href = URL.createObjectURL(blob);
+a.download = "markers.json";
+a.click();
+};
+
+document.getElementById("btnClear").onclick = () => {
+if (!confirm("Удалить все метки?")) return;
+markersData = [];
+nextId = 1;
+saveToStorage();
+selectedId = null;
+document.getElementById("sidebar").classList.remove("open");
+renderMarkers();
+};
+
+// ========== СТАРТ ==========
+renderMarkers();
+</script>
+</body>
+</html>
+          
     <!-- Полноэкранный лайтбокс для фотографий -->
     <div id="modal-lightbox" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 hidden">
       <div class="relative max-w-4xl w-full bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl">
