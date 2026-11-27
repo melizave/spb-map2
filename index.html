@@ -1374,83 +1374,8 @@ url:e,reason:"blocked_domain_not_allowlisted"},b.parentOrigin);throw new DOMExce
       </div>
     </section>
           
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Добавление меток</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: system-ui, -apple-system, sans-serif; height: 100vh; display: flex; flex-direction: column; }
-header { padding: 12px 16px; background: #1e293b; color: white; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-header h1 { font-size: 16px; font-weight: 600; margin-right: auto; }
-button { padding: 7px 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; }
-.btn-add { background: #059669; color: white; }
-.btn-add.active { background: #047857; }
-.btn-export { background: #3b82f6; color: white; }
-.btn-clear { background: #ef4444; color: white; }
-.btn-save { background: #2563eb; color: white; }
-.btn-delete { background: #fee2e2; color: #b91c1c; }
-#map { flex: 1; }
-.sidebar { width: 320px; background: #f8fafc; border-left: 1px solid #e2e8f0; padding: 16px; overflow-y: auto; display: none; }
-.sidebar.open { display: block; }
-.container { display: flex; flex: 1; overflow: hidden; }
-.form-group { margin-bottom: 12px; }
-.form-group label { display: block; font-size: 12px; color: #64748b; margin-bottom: 4px; }
-.form-group input, .form-group textarea { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; }
-.form-group textarea { height: 80px; resize: vertical; }
-.hint { font-size: 12px; color: #94a3b8; margin-top: 8px; }
-.marker-list { margin-top: 16px; }
-.marker-item { padding: 10px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
-.marker-item:hover { border-color: #94a3b8; }
-.marker-item.active { border-color: #3b82f6; background: #eff6ff; }
-</style>
-</head>
-<body>
-<header>
-<h1>Добавление меток</h1>
-<button class="btn-add" id="btnAdd">＋ Добавить метку</button>
-<button class="btn-export" id="btnExport">Скачать JSON</button>
-<button class="btn-clear" id="btnClear">Очистить всё</button>
-</header>
-
-<div class="container">
-<div id="map"></div>
-
-<div class="sidebar" id="sidebar">
-<h3 style="margin-bottom:12px;font-size:15px;" id="formTitle">Новая метка</h3>
-
-<div class="form-group">
-<label>Название</label>
-<input type="text" id="fTitle" placeholder="Например: Церковь..." />
-</div>
-<div class="form-group">
-<label>Описание</label>
-<textarea id="fDesc" placeholder="Краткое описание..."></textarea>
-</div>
-<div class="form-group">
-<label>Широта</label>
-<input type="number" step="0.0001" id="fLat" />
-</div>
-<div class="form-group">
-<label>Долгота</label>
-<input type="number" step="0.0001" id="fLng" />
-</div>
-
-<div style="display:flex;gap:8px;margin-top:12px;">
-<button class="btn-save" id="btnSave">Сохранить</button>
-<button class="btn-delete" id="btnDelete">Удалить</button>
-</div>
-<p class="hint">Кликните по карте, чтобы поставить метку</p>
-
-<div class="marker-list" id="markerList"></div>
-</div>
-</div>
-
 <script>
+        
 // ========== СОСТОЯНИЕ ==========
 let markersData = JSON.parse(localStorage.getItem("my_markers") || "[]");
 let leafletMarkers = {};
@@ -2269,6 +2194,7 @@ wikiNow: "Никольский рынок (Санкт-Петербург)",
 commonsNow: "Nikolsky Market Sadovaya Street Saint Petersburg",
 nowCaption: "Здание Никольского рынка на Садовой ул. (2026)"
 }
+            
     ];
 
     // =========================================================================
